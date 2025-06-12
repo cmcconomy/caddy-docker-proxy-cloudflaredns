@@ -1,0 +1,37 @@
+services:
+  caddy:
+    image: ghcr.io/cmcconomy/caddy-docker-proxy-cloudflaredns
+    build: .
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      - CADDY_INGRESS_NETWORKS=caddy
+    networks:
+      - caddy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - caddy_data:/data
+    restart: unless-stopped
+    labels:
+      caddy: "*.mydomain.com"
+      caddy.tls.dns: "cloudflare {env.CLOUDFLARE_API_TOKEN}"
+
+  whoami:
+    image: traefik/whoami
+    ports:
+      - 8080:80
+    networks:
+      - caddy
+    labels:
+      caddy: "*.mydomain.com"
+      caddy.@whoami: "host who.mydomain.com"
+      caddy.handle: "@whoami"
+      caddy.handle.reverse_proxy: "{{upstreams 80}}"
+
+networks:
+  caddy:
+    external: true
+
+volumes:
+  caddy_data: {}
